@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingredient Stability App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      margin: 20px auto;
+      max-width: 600px;
+    }
+    input, button {
+      font-size: 16px;
+      margin: 5px 0;
+      padding: 10px;
+      width: 100%;
+    }
+    button {
+      cursor: pointer;
+    }
+    #results {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ingredient Stability App</h1>
+
+  <!-- Search Ingredient -->
+  <form id="searchForm">
+    <h3>Search for an Ingredient</h3>
+    <input type="text" id="ingredientName" placeholder="Enter Ingredient Name" required>
+    <button type="submit">Search</button>
+  </form>
+
+  <!-- Fetch and Index All Ingredients -->
+  <form id="fetchAllForm">
+    <button type="button">Fetch and Index All Ingredients</button>
+  </form>
+
+  <!-- Results Section -->
+  <div id="results"></div>
+
+  <script>
+    const baseUrl = "http://127.0.0.1:8000"; // Backend URL
+
+    // Handle Search Form Submission
+    document.getElementById("searchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const ingredientName = document.getElementById("ingredientName").value;
+
+      try {
+        const response = await fetch(`${baseUrl}/search/?name=${encodeURIComponent(ingredientName)}`);
+        if (!response.ok) {
+          throw new Error("Ingredient not found");
+        }
+        const data = await response.json();
+        displaySearchResults(data);
+      } catch (error) {
+        displayError(error.message);
+      }
+    });
+
+    // Handle Fetch and Index All Ingredients Button
+    document.getElementById("fetchAllForm").addEventListener("click", async () => {
+      try {
+        const response = await fetch(`${baseUrl}/fetch_and_index_all/`, { method: "POST" });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        displayIndexResults(data);
+      } catch (error) {
+        displayError("Failed to fetch and index all ingredients.");
+      }
+    });
+
+    // Display Search Results
+    function displaySearchResults(data) {
+      const resultsDiv = document.getElementById("results");
+      if (Array.isArray(data) && data.length > 0) {
+        const ingredient = data[0];
+        const html = `
+          <h3>${ingredient.name || "Name not found"}</h3>
+          <p>${ingredient.stability_info || "Stability information not available"}</p>
+          <ul>
+            ${ingredient.references
+              ? ingredient.references
+                  .map((ref) => `<li><a href="${ref}" target="_blank">${ref}</a></li>`)
+                  .join("")
+              : "<li>No references available</li>"}
+          </ul>
+        `;
+        resultsDiv.innerHTML = html;
+      } else {
+        resultsDiv.innerHTML = "<p>No results found.</p>";
+      }
+    }
+
+    // Display Fetch and Index Results
+    function displayIndexResults(data) {
+      const resultsDiv = document.getElementById("results");
+      const html = data
+        .map(
+          (item) => `
+            <h3>${item.ingredient || "Ingredient not found"}</h3>
+            <p>ID: ${item.id || "No ID available"}</p>
+            <p>Result: ${item.result || "No result available"}</p>
+          `
+        )
+        .join("");
+      resultsDiv.innerHTML = html || "<p>No ingredients were indexed.</p>";
+    }
+
+    // Display Error
+    function displayError(message) {
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `<p class="error">${message}</p>`;
+    }
+  </script>
+</body>
+</html>
